@@ -1,0 +1,25 @@
+# Exported tours
+tours/
+
+# Virtual environment
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Environment files (may contain credentials)
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
