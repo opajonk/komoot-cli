@@ -62,7 +62,3 @@ cargo run -- --output-dir ~/komoot-backup
   - `cargo clippy --all-targets --all-features -- -D warnings`
 - Run tests:
   - `cargo test --all-targets --all-features`
-
-## Notes
-
-- This implementation talks directly to Komoot HTTP endpoints from Rust (no Python/runtime interop).
