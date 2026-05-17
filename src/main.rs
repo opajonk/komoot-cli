@@ -59,6 +59,24 @@ struct HttpKomootClient {
     email: String,
     password: String,
     username: String,
+    endpoints: KomootEndpoints,
+}
+
+#[derive(Clone)]
+struct KomootEndpoints {
+    user_login_url: String,
+    list_tours_url: String,
+    tour_url: String,
+}
+
+impl Default for KomootEndpoints {
+    fn default() -> Self {
+        Self {
+            user_login_url: USER_LOGIN_URL.to_string(),
+            list_tours_url: LIST_TOURS_URL.to_string(),
+            tour_url: TOUR_URL.to_string(),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -97,11 +115,19 @@ struct RawTour {
 
 impl HttpKomootClient {
     fn authenticate(email: String, password: String) -> Result<Self> {
+        Self::authenticate_with_endpoints(email, password, KomootEndpoints::default())
+    }
+
+    fn authenticate_with_endpoints(
+        email: String,
+        password: String,
+        endpoints: KomootEndpoints,
+    ) -> Result<Self> {
         let http = Client::builder()
             .user_agent("komoot-export-rust")
             .build()
             .context("failed to build HTTP client")?;
-        let login_url = USER_LOGIN_URL.replace("{email}", &email);
+        let login_url = endpoints.user_login_url.replace("{email}", &email);
         let response = http
             .get(login_url)
             .basic_auth(&email, Some(&password))
@@ -124,6 +150,7 @@ impl HttpKomootClient {
             email,
             password,
             username: body.username,
+            endpoints,
         })
     }
 
@@ -134,7 +161,7 @@ impl HttpKomootClient {
         status: &str,
         page: usize,
     ) -> Result<ToursResponse> {
-        let url = LIST_TOURS_URL.replace("{user}", user_identifier);
+        let url = self.endpoints.list_tours_url.replace("{user}", user_identifier);
         let response = self
             .http
             .get(url)
@@ -213,7 +240,7 @@ impl KomootApi for HttpKomootClient {
     }
 
     fn download_tour_gpx(&self, tour_id: &str) -> Result<Vec<u8>> {
-        let url = format!("{}.gpx", TOUR_URL.replace("{tour_id}", tour_id));
+        let url = format!("{}.gpx", self.endpoints.tour_url.replace("{tour_id}", tour_id));
         let response = self
             .http
             .get(url)
@@ -347,6 +374,10 @@ fn main() {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use std::io::{BufRead, BufReader, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::sync::mpsc;
+    use std::thread;
 
     struct MockKomootClient {
         username: String,
@@ -379,6 +410,105 @@ mod tests {
             tour_type: tour_type.to_string(),
             status: status.to_string(),
             date: date.to_string(),
+        }
+    }
+
+    fn parse_query(path: &str) -> HashMap<String, String> {
+        let mut out = HashMap::new();
+        let Some((_, query)) = path.split_once('?') else {
+            return out;
+        };
+        for pair in query.split('&') {
+            let Some((key, value)) = pair.split_once('=') else {
+                continue;
+            };
+            out.insert(key.to_string(), value.to_string());
+        }
+        out
+    }
+
+    fn read_request(stream: &mut TcpStream) -> (String, String, HashMap<String, String>) {
+        let mut reader = BufReader::new(stream.try_clone().expect("clone stream"));
+        let mut request_line = String::new();
+        reader
+            .read_line(&mut request_line)
+            .expect("read request line");
+
+        let mut headers = HashMap::new();
+        loop {
+            let mut line = String::new();
+            reader.read_line(&mut line).expect("read header line");
+            if line == "\r\n" || line.is_empty() {
+                break;
+            }
+            if let Some((name, value)) = line.split_once(':') {
+                headers.insert(name.trim().to_ascii_lowercase(), value.trim().to_string());
+            }
+        }
+
+        let mut parts = request_line.split_whitespace();
+        let method = parts.next().unwrap_or_default().to_string();
+        let path = parts.next().unwrap_or_default().to_string();
+        (method, path, headers)
+    }
+
+    fn write_response(stream: &mut TcpStream, status: u16, content_type: &str, body: &str) {
+        let status_text = match status {
+            200 => "OK",
+            401 => "Unauthorized",
+            403 => "Forbidden",
+            404 => "Not Found",
+            _ => "Internal Server Error",
+        };
+        write!(
+            stream,
+            "HTTP/1.1 {status} {status_text}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        )
+        .expect("write response");
+    }
+
+    fn start_mock_server<F>(expected_requests: usize, handler: F) -> (String, thread::JoinHandle<()>)
+    where
+        F: Fn(usize, &str, &str, &HashMap<String, String>) -> (u16, &'static str, String)
+            + Send
+            + Sync
+            + 'static,
+    {
+        let (addr_tx, addr_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+            let addr = listener.local_addr().expect("local addr");
+            addr_tx.send(addr).expect("send addr");
+            for idx in 0..expected_requests {
+                let (mut stream, _) = listener.accept().expect("accept");
+                let (method, path, headers) = read_request(&mut stream);
+                let (status, content_type, body) = handler(idx, &method, &path, &headers);
+                write_response(&mut stream, status, content_type, &body);
+            }
+        });
+        let addr = addr_rx.recv().expect("recv addr");
+        (format!("http://{addr}"), handle)
+    }
+
+    fn make_endpoints(base_url: &str) -> KomootEndpoints {
+        KomootEndpoints {
+            user_login_url: format!("{base_url}/v006/account/email/{{email}}/"),
+            list_tours_url: format!("{base_url}/v007/users/{{user}}/tours/"),
+            tour_url: format!("{base_url}/v007/tours/{{tour_id}}"),
+        }
+    }
+
+    fn make_http_client(username: &str, endpoints: KomootEndpoints) -> HttpKomootClient {
+        HttpKomootClient {
+            http: Client::builder()
+                .user_agent("komoot-export-rust-test")
+                .build()
+                .expect("build client"),
+            email: "test@example.com".to_string(),
+            password: "secret".to_string(),
+            username: username.to_string(),
+            endpoints,
         }
     }
 
@@ -501,5 +631,98 @@ mod tests {
                 .join("made/public/2024-01-01_55_Fail_Tour.gpx")
                 .exists()
         );
+    }
+
+    #[test]
+    fn authenticate_requests_login_endpoint_and_parses_username() {
+        let (base_url, handle) = start_mock_server(1, |_, method, path, headers| {
+            assert_eq!(method, "GET");
+            assert_eq!(path, "/v006/account/email/test@example.com/");
+            assert!(headers
+                .get("authorization")
+                .is_some_and(|value| value.starts_with("Basic ")));
+            (200, "application/json", r#"{"username":"demo-user"}"#.to_string())
+        });
+
+        let client = HttpKomootClient::authenticate_with_endpoints(
+            "test@example.com".to_string(),
+            "secret".to_string(),
+            make_endpoints(&base_url),
+        )
+        .expect("authenticate");
+
+        assert_eq!(client.username(), "demo-user");
+        handle.join().expect("join server");
+    }
+
+    #[test]
+    fn fetch_all_tours_handles_pagination_and_deduplicates_ids() {
+        let (base_url, handle) = start_mock_server(7, |_, method, path, headers| {
+            assert_eq!(method, "GET");
+            assert!(path.starts_with("/v007/users/demo/tours/"));
+            assert!(headers
+                .get("authorization")
+                .is_some_and(|value| value.starts_with("Basic ")));
+
+            let query = parse_query(path);
+            let tour_type = query.get("type").map(String::as_str).unwrap_or_default();
+            let status = query.get("status").map(String::as_str).unwrap_or_default();
+            let page = query.get("page").map(String::as_str).unwrap_or_default();
+
+            let body = if tour_type == TOUR_RECORDED && status == "public" && page == "0" {
+                r#"{
+                    "_embedded": {
+                        "tours": [
+                            {"id":"1","name":"First","type":"tour_recorded","status":"public","date":"2024-01-01T00:00:00Z"}
+                        ]
+                    },
+                    "page": {"totalPages": 2, "number": 0}
+                }"#
+            } else if tour_type == TOUR_RECORDED && status == "public" && page == "1" {
+                r#"{
+                    "_embedded": {
+                        "tours": [
+                            {"id":"1","name":"First duplicate","type":"tour_recorded","status":"public","date":"2024-01-01T00:00:00Z"},
+                            {"id":2,"name":"Second","type":"tour_recorded","status":"public","date":"2024-01-02T00:00:00Z"}
+                        ]
+                    },
+                    "page": {"totalPages": 2, "number": 1}
+                }"#
+            } else {
+                r#"{
+                    "_embedded": {"tours": []},
+                    "page": {"totalPages": 1, "number": 0}
+                }"#
+            };
+
+            (200, "application/json", body.to_string())
+        });
+
+        let client = make_http_client("demo", make_endpoints(&base_url));
+        let tours = client.fetch_all_tours().expect("fetch all tours");
+
+        assert_eq!(tours.len(), 2);
+        assert_eq!(tours.iter().filter(|tour| tour.id == "1").count(), 1);
+        assert!(tours.iter().any(|tour| tour.id == "1"));
+        assert!(tours.iter().any(|tour| tour.id == "2"));
+        handle.join().expect("join server");
+    }
+
+    #[test]
+    fn download_tour_gpx_requests_gpx_endpoint_without_query_and_returns_body() {
+        let (base_url, handle) = start_mock_server(1, |_, method, path, headers| {
+            assert_eq!(method, "GET");
+            assert_eq!(path, "/v007/tours/42.gpx");
+            assert!(headers
+                .get("authorization")
+                .is_some_and(|value| value.starts_with("Basic ")));
+            (200, "application/gpx+xml", "<gpx>ok</gpx>".to_string())
+        });
+
+        let client = make_http_client("demo", make_endpoints(&base_url));
+        let body = client.download_tour_gpx("42").expect("download gpx");
+
+        assert_eq!(body, b"<gpx>ok</gpx>".to_vec());
+        handle.join().expect("join server");
     }
 }
