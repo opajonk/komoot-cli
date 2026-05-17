@@ -20,7 +20,7 @@
       ]
     }
   },
-  "postCreateCommand": "bash -lc 'set -euo pipefail; python -m pip install --user uv; ~/.local/bin/uv sync --all-groups; ~/.local/bin/uv run pre-commit install'",
-  "postStartCommand": "~/.local/bin/uv sync --all-groups",
+  "postCreateCommand": "bash -lc 'set -euo pipefail; python -m pip install --user uv; export PATH=\"$HOME/.local/bin:$PATH\"; uv sync --all-groups; uv run pre-commit install'",
+  "postStartCommand": "bash -lc 'export PATH=\"$HOME/.local/bin:$PATH\"; uv sync --all-groups'",
   "remoteUser": "vscode"
 }
