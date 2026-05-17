@@ -7,7 +7,7 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
           "source.organizeImports": "explicit"
@@ -20,6 +20,7 @@
       ]
     }
   },
-  "postCreateCommand": "pip install --upgrade pip && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi && pre-commit install",
+  "postCreateCommand": "bash -lc 'set -euo pipefail; python -m pip install --user uv; export PATH=\"$HOME/.local/bin:$PATH\"; uv sync --all-groups; uv run pre-commit install'",
+  "postStartCommand": "bash -lc 'export PATH=\"$HOME/.local/bin:$PATH\"; uv sync --all-groups'",
   "remoteUser": "vscode"
 }

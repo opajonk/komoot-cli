@@ -1,0 +1,18 @@
+[project]
+name = "komoot-export"
+version = "0.1.0"
+description = "Export all tours from a Komoot account as GPX files."
+requires-python = ">=3.11"
+dependencies = [
+    "kompy==0.0.12",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit",
+    "pytest",
+    "ruff",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
