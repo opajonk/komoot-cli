@@ -127,13 +127,23 @@ impl HttpKomootClient {
         })
     }
 
-    fn fetch_page(&self, user_identifier: &str, tour_type: &str, status: &str, page: usize) -> Result<ToursResponse> {
+    fn fetch_page(
+        &self,
+        user_identifier: &str,
+        tour_type: &str,
+        status: &str,
+        page: usize,
+    ) -> Result<ToursResponse> {
         let url = LIST_TOURS_URL.replace("{user}", user_identifier);
         let response = self
             .http
             .get(url)
             .basic_auth(&self.email, Some(&self.password))
-            .query(&[("type", tour_type), ("status", status), ("page", &page.to_string())])
+            .query(&[
+                ("type", tour_type),
+                ("status", status),
+                ("page", &page.to_string()),
+            ])
             .send()
             .context("failed to request tours page")?;
 
@@ -185,9 +195,7 @@ impl KomootApi for HttpKomootClient {
                         all_tours.push(TourEntry {
                             id: tour_id,
                             name: raw_tour.name.unwrap_or_else(|| "Unknown".to_string()),
-                            tour_type: raw_tour
-                                .tour_type
-                                .unwrap_or_else(|| tour_type.to_string()),
+                            tour_type: raw_tour.tour_type.unwrap_or_else(|| tour_type.to_string()),
                             status: raw_tour.status.unwrap_or_else(|| status.to_string()),
                             date: raw_tour.date.unwrap_or_default(),
                         });
@@ -224,7 +232,10 @@ impl KomootApi for HttpKomootClient {
             bail!("failed to download GPX with status {}", response.status());
         }
 
-        response.bytes().map(|b| b.to_vec()).context("failed to read GPX body")
+        response
+            .bytes()
+            .map(|b| b.to_vec())
+            .context("failed to read GPX body")
     }
 }
 
@@ -293,7 +304,8 @@ fn export_with_client(client: &dyn KomootApi, output_dir: &Path) -> Result<Expor
         };
 
         if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent).with_context(|| format!("failed to create folder {}", parent.display()))?;
+            fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create folder {}", parent.display()))?;
         }
         fs::write(&destination, gpx)
             .with_context(|| format!("failed to write {}", destination.display()))?;
@@ -304,7 +316,9 @@ fn export_with_client(client: &dyn KomootApi, output_dir: &Path) -> Result<Expor
 }
 
 fn run(args: Args) -> Result<()> {
-    let email = args.email.ok_or_else(|| anyhow!("KOMOOT_EMAIL or --email is required"))?;
+    let email = args
+        .email
+        .ok_or_else(|| anyhow!("KOMOOT_EMAIL or --email is required"))?;
     let password = match args.password {
         Some(pwd) => pwd,
         None => rpassword::prompt_password("Komoot password: ")
@@ -392,7 +406,13 @@ mod tests {
     #[test]
     fn export_writes_gpx_file() {
         let tmp = tempfile::tempdir().expect("tempdir");
-        let tour = make_tour("99", "Test Tour", TOUR_RECORDED, "public", "2024-03-15T00:00:00Z");
+        let tour = make_tour(
+            "99",
+            "Test Tour",
+            TOUR_RECORDED,
+            "public",
+            "2024-03-15T00:00:00Z",
+        );
         let mut gpx_by_id = HashMap::new();
         gpx_by_id.insert("99".to_string(), Some(b"<gpx/>".to_vec()));
         let client = MockKomootClient {
@@ -415,7 +435,13 @@ mod tests {
         fs::create_dir_all(existing_path.parent().expect("parent")).expect("mkdir");
         fs::write(&existing_path, b"existing").expect("write");
 
-        let tour = make_tour("99", "Test Tour", TOUR_RECORDED, "public", "2024-03-15T00:00:00Z");
+        let tour = make_tour(
+            "99",
+            "Test Tour",
+            TOUR_RECORDED,
+            "public",
+            "2024-03-15T00:00:00Z",
+        );
         let mut gpx_by_id = HashMap::new();
         gpx_by_id.insert("99".to_string(), Some(b"<gpx/>".to_vec()));
         let client = MockKomootClient {
@@ -433,7 +459,13 @@ mod tests {
     #[test]
     fn export_skips_unknown_type() {
         let tmp = tempfile::tempdir().expect("tempdir");
-        let tour = make_tour("77", "Unknown", "tour_unknown", "public", "2024-03-15T00:00:00Z");
+        let tour = make_tour(
+            "77",
+            "Unknown",
+            "tour_unknown",
+            "public",
+            "2024-03-15T00:00:00Z",
+        );
         let client = MockKomootClient {
             username: "user".to_string(),
             tours: vec![tour],
@@ -448,7 +480,13 @@ mod tests {
     #[test]
     fn export_marks_failed_download() {
         let tmp = tempfile::tempdir().expect("tempdir");
-        let tour = make_tour("55", "Fail Tour", TOUR_RECORDED, "public", "2024-01-01T00:00:00Z");
+        let tour = make_tour(
+            "55",
+            "Fail Tour",
+            TOUR_RECORDED,
+            "public",
+            "2024-01-01T00:00:00Z",
+        );
         let mut gpx_by_id = HashMap::new();
         gpx_by_id.insert("55".to_string(), None);
         let client = MockKomootClient {
@@ -459,6 +497,10 @@ mod tests {
 
         let summary = export_with_client(&client, tmp.path()).expect("export");
         assert_eq!(summary.failed, 1);
-        assert!(!tmp.path().join("made/public/2024-01-01_55_Fail_Tour.gpx").exists());
+        assert!(
+            !tmp.path()
+                .join("made/public/2024-01-01_55_Fail_Tour.gpx")
+                .exists()
+        );
     }
 }
