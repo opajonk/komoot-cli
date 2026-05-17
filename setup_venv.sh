@@ -12,9 +12,7 @@ echo "Creating or updating virtual environment in $VENV_DIR …"
 uv venv "$VENV_DIR"
 
 echo "Installing dependencies with uv sync …"
-# shellcheck disable=SC1090
-source "$VENV_DIR/bin/activate"
-uv sync --all-groups --active
+uv sync --all-groups --python "$VENV_DIR/bin/python"
 
 echo ""
 echo "Setup complete. Activate the environment with:"
