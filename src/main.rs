@@ -218,7 +218,6 @@ impl KomootApi for HttpKomootClient {
             .http
             .get(url)
             .basic_auth(&self.email, Some(&self.password))
-            .query(&[("Type", "application/hal+json")])
             .send()
             .context("failed to request GPX")?;
 
