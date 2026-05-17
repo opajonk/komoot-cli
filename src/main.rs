@@ -316,70 +316,49 @@ fn export_with_client(client: &dyn KomootApi, output_dir: &Path) -> Result<Expor
     let total_tours = tours.len();
     println!("Starting export of {total_tours} tours...");
     let mut summary = ExportSummary::default();
-
-    for (index, tour) in tours.into_iter().enumerate() {
-        let Some(folder) = type_folder(&tour.tour_type) else {
-            summary.skipped_type += 1;
-            let processed = index + 1;
-            if processed % 100 == 0 || processed == total_tours {
-                println!(
-                    "Progress: {processed}/{total_tours} processed (saved={}, skipped existing={}, skipped unknown type={}, failed={}).",
-                    summary.saved, summary.skipped_existing, summary.skipped_type, summary.failed
-                );
-            }
-            continue;
-        };
-
-        let safe_name = sanitize_filename(&tour.name);
-        let date_prefix = parse_date_prefix(&tour.date);
-        let filename = format!("{date_prefix}_{}_{}.gpx", tour.id, safe_name);
-        let destination = output_dir.join(folder).join(&tour.status).join(filename);
-
-        if destination.exists() {
-            summary.skipped_existing += 1;
-            let processed = index + 1;
-            if processed % 100 == 0 || processed == total_tours {
-                println!(
-                    "Progress: {processed}/{total_tours} processed (saved={}, skipped existing={}, skipped unknown type={}, failed={}).",
-                    summary.saved, summary.skipped_existing, summary.skipped_type, summary.failed
-                );
-            }
-            continue;
-        }
-
-        let gpx = match client.download_tour_gpx(&tour.id) {
-            Ok(body) => body,
-            Err(err) => {
-                eprintln!("Failed to download GPX for tour {}: {err}", tour.id);
-                summary.failed += 1;
-                let processed = index + 1;
-                if processed % 100 == 0 || processed == total_tours {
-                    println!(
-                        "Progress: {processed}/{total_tours} processed (saved={}, skipped existing={}, skipped unknown type={}, failed={}).",
-                        summary.saved,
-                        summary.skipped_existing,
-                        summary.skipped_type,
-                        summary.failed
-                    );
-                }
-                continue;
-            }
-        };
-
-        if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create folder {}", parent.display()))?;
-        }
-        fs::write(&destination, gpx)
-            .with_context(|| format!("failed to write {}", destination.display()))?;
-        summary.saved += 1;
-        let processed = index + 1;
-        if processed % 100 == 0 || processed == total_tours {
+    let log_progress = |processed: usize, summary: &ExportSummary| {
+        if processed.is_multiple_of(100) || processed == total_tours {
             println!(
                 "Progress: {processed}/{total_tours} processed (saved={}, skipped existing={}, skipped unknown type={}, failed={}).",
                 summary.saved, summary.skipped_existing, summary.skipped_type, summary.failed
             );
         }
+    };
+
+    for (index, tour) in tours.into_iter().enumerate() {
+        if let Some(folder) = type_folder(&tour.tour_type) {
+            let safe_name = sanitize_filename(&tour.name);
+            let date_prefix = parse_date_prefix(&tour.date);
+            let filename = format!("{date_prefix}_{}_{}.gpx", tour.id, safe_name);
+            let destination = output_dir.join(folder).join(&tour.status).join(filename);
+
+            if destination.exists() {
+                summary.skipped_existing += 1;
+            } else {
+                match client.download_tour_gpx(&tour.id) {
+                    Ok(gpx) => {
+                        if let Some(parent) = destination.parent() {
+                            fs::create_dir_all(parent).with_context(|| {
+                                format!("failed to create folder {}", parent.display())
+                            })?;
+                        }
+                        fs::write(&destination, gpx).with_context(|| {
+                            format!("failed to write {}", destination.display())
+                        })?;
+                        summary.saved += 1;
+                    }
+                    Err(err) => {
+                        eprintln!("Failed to download GPX for tour {}: {err}", tour.id);
+                        summary.failed += 1;
+                    }
+                }
+            }
+        } else {
+            summary.skipped_type += 1;
+        }
+
+        let processed = index + 1;
+        log_progress(processed, &summary);
     }
 
     Ok(summary)
