@@ -240,9 +240,7 @@ impl KomootApi for HttpKomootClient {
                     page = response.page.number + 1;
                 }
                 let added = all_tours.len() - before_count;
-                println!(
-                    "Loaded tours (type={tour_type}, status={status}): {added} new entries."
-                );
+                println!("Loaded tours (type={tour_type}, status={status}): {added} new entries.");
             }
         }
 
@@ -358,7 +356,10 @@ fn export_with_client(client: &dyn KomootApi, output_dir: &Path) -> Result<Expor
                 if processed % 100 == 0 || processed == total_tours {
                     println!(
                         "Progress: {processed}/{total_tours} processed (saved={}, skipped existing={}, skipped unknown type={}, failed={}).",
-                        summary.saved, summary.skipped_existing, summary.skipped_type, summary.failed
+                        summary.saved,
+                        summary.skipped_existing,
+                        summary.skipped_type,
+                        summary.failed
                     );
                 }
                 continue;
