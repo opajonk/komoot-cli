@@ -326,7 +326,7 @@ fn run(args: Args) -> Result<()> {
     };
 
     let client = HttpKomootClient::authenticate(email, password)?;
-    println!("Logged in as {}.", client.username());
+    println!("Authentication successful.");
 
     let summary = export_with_client(&client, &args.output_dir)?;
     println!(
