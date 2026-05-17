@@ -1,4 +1,0 @@
-kompy==0.0.12
-pre-commit
-pytest
-ruff

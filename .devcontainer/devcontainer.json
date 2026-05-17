@@ -7,7 +7,7 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
           "source.organizeImports": "explicit"
@@ -20,6 +20,7 @@
       ]
     }
   },
-  "postCreateCommand": "pip install --upgrade pip && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi && pre-commit install",
+  "postCreateCommand": "python -m pip install --user uv && ~/.local/bin/uv sync --all-groups && ~/.local/bin/uv run pre-commit install",
+  "postStartCommand": "~/.local/bin/uv sync --all-groups",
   "remoteUser": "vscode"
 }

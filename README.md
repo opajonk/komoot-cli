@@ -26,7 +26,7 @@ Re-running the script is safe — already-downloaded files are skipped.
 ## Setup
 
 ```bash
-./setup_venv.sh          # creates .venv and installs dependencies
+uv sync --all-groups     # creates .venv and installs dependencies
 source .venv/bin/activate
 ```
 
@@ -36,15 +36,15 @@ Credentials can be passed as flags or via environment variables:
 
 ```bash
 # flags
-python export_tours.py --email you@example.com --password yourpassword
+uv run export_tours.py --email you@example.com --password yourpassword
 
 # environment variables
 export KOMOOT_EMAIL=you@example.com
 export KOMOOT_PASSWORD=yourpassword
-python export_tours.py
+uv run export_tours.py
 
 # custom output directory (default: ./tours)
-python export_tours.py --output-dir ~/komoot-backup
+uv run export_tours.py --output-dir ~/komoot-backup
 ```
 
 ### Options
@@ -58,3 +58,4 @@ python export_tours.py --output-dir ~/komoot-backup
 ## Dependencies
 
 - [kompy](https://github.com/Tsadoq/kompy) — Python wrapper for the Komoot API
+- Development tooling is managed through `uv` dependency groups.
