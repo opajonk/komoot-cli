@@ -59,6 +59,10 @@ jobs:
             target: x86_64-pc-windows-msvc
             executable: komoot-export.exe
             artifact_name: komoot-export-windows-x86_64
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            executable: komoot-export.exe
+            artifact_name: komoot-export-windows-aarch64
 
     runs-on: ${{ matrix.os }}
 

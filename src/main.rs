@@ -196,11 +196,14 @@ impl KomootApi for HttpKomootClient {
     }
 
     fn fetch_all_tours(&self) -> Result<Vec<TourEntry>> {
+        println!("Fetching tour lists...");
         let mut all_tours = Vec::new();
         let mut seen_ids = HashSet::new();
 
         for status in STATUSES {
             for tour_type in TOUR_TYPES {
+                println!("Loading tours (type={tour_type}, status={status})...");
+                let before_count = all_tours.len();
                 let mut page = 0usize;
                 loop {
                     let response = match self.fetch_page(self.username(), tour_type, status, page) {
@@ -236,6 +239,10 @@ impl KomootApi for HttpKomootClient {
                     }
                     page = response.page.number + 1;
                 }
+                let added = all_tours.len() - before_count;
+                println!(
+                    "Loaded tours (type={tour_type}, status={status}): {added} new entries."
+                );
             }
         }
 
@@ -308,11 +315,20 @@ fn export_with_client(client: &dyn KomootApi, output_dir: &Path) -> Result<Expor
     }
 
     let tours = client.fetch_all_tours()?;
+    let total_tours = tours.len();
+    println!("Starting export of {total_tours} tours...");
     let mut summary = ExportSummary::default();
 
-    for tour in tours {
+    for (index, tour) in tours.into_iter().enumerate() {
         let Some(folder) = type_folder(&tour.tour_type) else {
             summary.skipped_type += 1;
+            let processed = index + 1;
+            if processed % 100 == 0 || processed == total_tours {
+                println!(
+                    "Progress: {processed}/{total_tours} processed (saved={}, skipped existing={}, skipped unknown type={}, failed={}).",
+                    summary.saved, summary.skipped_existing, summary.skipped_type, summary.failed
+                );
+            }
             continue;
         };
 
@@ -323,6 +339,13 @@ fn export_with_client(client: &dyn KomootApi, output_dir: &Path) -> Result<Expor
 
         if destination.exists() {
             summary.skipped_existing += 1;
+            let processed = index + 1;
+            if processed % 100 == 0 || processed == total_tours {
+                println!(
+                    "Progress: {processed}/{total_tours} processed (saved={}, skipped existing={}, skipped unknown type={}, failed={}).",
+                    summary.saved, summary.skipped_existing, summary.skipped_type, summary.failed
+                );
+            }
             continue;
         }
 
@@ -331,6 +354,13 @@ fn export_with_client(client: &dyn KomootApi, output_dir: &Path) -> Result<Expor
             Err(err) => {
                 eprintln!("Failed to download GPX for tour {}: {err}", tour.id);
                 summary.failed += 1;
+                let processed = index + 1;
+                if processed % 100 == 0 || processed == total_tours {
+                    println!(
+                        "Progress: {processed}/{total_tours} processed (saved={}, skipped existing={}, skipped unknown type={}, failed={}).",
+                        summary.saved, summary.skipped_existing, summary.skipped_type, summary.failed
+                    );
+                }
                 continue;
             }
         };
@@ -342,6 +372,13 @@ fn export_with_client(client: &dyn KomootApi, output_dir: &Path) -> Result<Expor
         fs::write(&destination, gpx)
             .with_context(|| format!("failed to write {}", destination.display()))?;
         summary.saved += 1;
+        let processed = index + 1;
+        if processed % 100 == 0 || processed == total_tours {
+            println!(
+                "Progress: {processed}/{total_tours} processed (saved={}, skipped existing={}, skipped unknown type={}, failed={}).",
+                summary.saved, summary.skipped_existing, summary.skipped_type, summary.failed
+            );
+        }
     }
 
     Ok(summary)
