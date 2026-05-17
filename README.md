@@ -1,6 +1,6 @@
 # komoot-export
 
-A Python script that downloads all tours from a [Komoot](https://www.komoot.com) account and saves them as GPX files, organised into subfolders by tour type and visibility.
+A Rust CLI that downloads all tours from a [Komoot](https://www.komoot.com) account and saves them as GPX files, organised into subfolders by tour type and visibility.
 
 ## Output structure
 
@@ -21,13 +21,12 @@ Re-running the script is safe — already-downloaded files are skipped.
 
 ## Requirements
 
-- Python 3.11+
+- Rust (stable toolchain)
 
 ## Setup
 
 ```bash
-uv sync --all-groups     # creates .venv and installs dependencies
-source .venv/bin/activate
+cargo build
 ```
 
 ## Usage
@@ -36,15 +35,15 @@ Credentials can be passed as flags or via environment variables:
 
 ```bash
 # flags
-uv run export_tours.py --email you@example.com --password yourpassword
+cargo run -- --email you@example.com --password yourpassword
 
 # environment variables
 export KOMOOT_EMAIL=you@example.com
 export KOMOOT_PASSWORD=yourpassword
-uv run export_tours.py
+cargo run --
 
 # custom output directory (default: ./tours)
-uv run export_tours.py --output-dir ~/komoot-backup
+cargo run -- --output-dir ~/komoot-backup
 ```
 
 ### Options
@@ -55,7 +54,11 @@ uv run export_tours.py --output-dir ~/komoot-backup
 | `--password` | `KOMOOT_PASSWORD` | — | Komoot account password (required) |
 | `--output-dir` | — | `tours` | Root directory for exported GPX files |
 
-## Dependencies
+## Development
 
-- [kompy](https://github.com/Tsadoq/kompy) — Python wrapper for the Komoot API
-- Development tooling is managed through `uv` dependency groups.
+- Run formatting check:
+  - `cargo fmt --all -- --check`
+- Run lints:
+  - `cargo clippy --all-targets --all-features -- -D warnings`
+- Run tests:
+  - `cargo test --all-targets --all-features`
