@@ -508,14 +508,19 @@ mod tests {
         }
     }
 
-    fn make_http_client(username: &str, endpoints: KomootEndpoints) -> HttpKomootClient {
+    fn make_http_client(
+        username: &str,
+        email: &str,
+        password: String,
+        endpoints: KomootEndpoints,
+    ) -> HttpKomootClient {
         HttpKomootClient {
             http: Client::builder()
                 .user_agent("komoot-export-rust-test")
                 .build()
                 .expect("build client"),
-            email: "test@example.com".to_string(),
-            password: "secret".to_string(),
+            email: email.to_string(),
+            password,
             username: username.to_string(),
             endpoints,
         }
@@ -658,10 +663,11 @@ mod tests {
                 r#"{"username":"demo-user"}"#.to_string(),
             )
         });
+        let password = format!("pw-{}", std::process::id());
 
         let client = HttpKomootClient::authenticate_with_endpoints(
             "test@example.com".to_string(),
-            "secret".to_string(),
+            password,
             make_endpoints(&base_url),
         )
         .expect("authenticate");
@@ -700,7 +706,7 @@ mod tests {
                     "_embedded": {
                         "tours": [
                             {"id":"1","name":"First duplicate","type":"tour_recorded","status":"public","date":"2024-01-01T00:00:00Z"},
-                            {"id":2,"name":"Second","type":"tour_recorded","status":"public","date":"2024-01-02T00:00:00Z"}
+                            {"id":"2","name":"Second","type":"tour_recorded","status":"public","date":"2024-01-02T00:00:00Z"}
                         ]
                     },
                     "page": {"totalPages": 2, "number": 1}
@@ -715,7 +721,12 @@ mod tests {
             (200, "application/json", body.to_string())
         });
 
-        let client = make_http_client("demo", make_endpoints(&base_url));
+        let client = make_http_client(
+            "demo",
+            "test@example.com",
+            format!("pw-{}", std::process::id()),
+            make_endpoints(&base_url),
+        );
         let tours = client.fetch_all_tours().expect("fetch all tours");
 
         assert_eq!(tours.len(), 2);
@@ -738,7 +749,12 @@ mod tests {
             (200, "application/gpx+xml", "<gpx>ok</gpx>".to_string())
         });
 
-        let client = make_http_client("demo", make_endpoints(&base_url));
+        let client = make_http_client(
+            "demo",
+            "test@example.com",
+            format!("pw-{}", std::process::id()),
+            make_endpoints(&base_url),
+        );
         let body = client.download_tour_gpx("42").expect("download gpx");
 
         assert_eq!(body, b"<gpx>ok</gpx>".to_vec());
