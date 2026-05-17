@@ -161,7 +161,10 @@ impl HttpKomootClient {
         status: &str,
         page: usize,
     ) -> Result<ToursResponse> {
-        let url = self.endpoints.list_tours_url.replace("{user}", user_identifier);
+        let url = self
+            .endpoints
+            .list_tours_url
+            .replace("{user}", user_identifier);
         let response = self
             .http
             .get(url)
@@ -240,7 +243,10 @@ impl KomootApi for HttpKomootClient {
     }
 
     fn download_tour_gpx(&self, tour_id: &str) -> Result<Vec<u8>> {
-        let url = format!("{}.gpx", self.endpoints.tour_url.replace("{tour_id}", tour_id));
+        let url = format!(
+            "{}.gpx",
+            self.endpoints.tour_url.replace("{tour_id}", tour_id)
+        );
         let response = self
             .http
             .get(url)
@@ -468,7 +474,10 @@ mod tests {
         .expect("write response");
     }
 
-    fn start_mock_server<F>(expected_requests: usize, handler: F) -> (String, thread::JoinHandle<()>)
+    fn start_mock_server<F>(
+        expected_requests: usize,
+        handler: F,
+    ) -> (String, thread::JoinHandle<()>)
     where
         F: Fn(usize, &str, &str, &HashMap<String, String>) -> (u16, &'static str, String)
             + Send
@@ -638,10 +647,16 @@ mod tests {
         let (base_url, handle) = start_mock_server(1, |_, method, path, headers| {
             assert_eq!(method, "GET");
             assert_eq!(path, "/v006/account/email/test@example.com/");
-            assert!(headers
-                .get("authorization")
-                .is_some_and(|value| value.starts_with("Basic ")));
-            (200, "application/json", r#"{"username":"demo-user"}"#.to_string())
+            assert!(
+                headers
+                    .get("authorization")
+                    .is_some_and(|value| value.starts_with("Basic "))
+            );
+            (
+                200,
+                "application/json",
+                r#"{"username":"demo-user"}"#.to_string(),
+            )
         });
 
         let client = HttpKomootClient::authenticate_with_endpoints(
@@ -660,9 +675,11 @@ mod tests {
         let (base_url, handle) = start_mock_server(7, |_, method, path, headers| {
             assert_eq!(method, "GET");
             assert!(path.starts_with("/v007/users/demo/tours/"));
-            assert!(headers
-                .get("authorization")
-                .is_some_and(|value| value.starts_with("Basic ")));
+            assert!(
+                headers
+                    .get("authorization")
+                    .is_some_and(|value| value.starts_with("Basic "))
+            );
 
             let query = parse_query(path);
             let tour_type = query.get("type").map(String::as_str).unwrap_or_default();
@@ -713,9 +730,11 @@ mod tests {
         let (base_url, handle) = start_mock_server(1, |_, method, path, headers| {
             assert_eq!(method, "GET");
             assert_eq!(path, "/v007/tours/42.gpx");
-            assert!(headers
-                .get("authorization")
-                .is_some_and(|value| value.starts_with("Basic ")));
+            assert!(
+                headers
+                    .get("authorization")
+                    .is_some_and(|value| value.starts_with("Basic "))
+            );
             (200, "application/gpx+xml", "<gpx>ok</gpx>".to_string())
         });
 
