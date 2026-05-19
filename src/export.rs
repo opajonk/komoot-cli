@@ -73,32 +73,34 @@ pub fn export_with_client(
     };
 
     for (index, tour) in tours.into_iter().enumerate() {
-        if !tour_matches_filters(&tour, filters) {
-            summary.skipped_filter += 1;
-        } else if let Some(folder) = type_folder(&tour.tour_type) {
-            let safe_name = sanitize_filename(&tour.name);
-            let date_prefix = parse_date_prefix(&tour.date);
-            let filename = format!("{date_prefix}_{}_{}.gpx", tour.id, safe_name);
-            let destination = output_dir.join(folder).join(&tour.status).join(filename);
-
-            if destination.exists() {
-                summary.skipped_existing += 1;
+        if let Some(folder) = type_folder(&tour.tour_type) {
+            if !tour_matches_filters(&tour, filters) {
+                summary.skipped_filter += 1;
             } else {
-                match client.download_tour_gpx(&tour.id) {
-                    Ok(gpx) => {
-                        if let Some(parent) = destination.parent() {
-                            fs::create_dir_all(parent).with_context(|| {
-                                format!("failed to create folder {}", parent.display())
+                let safe_name = sanitize_filename(&tour.name);
+                let date_prefix = parse_date_prefix(&tour.date);
+                let filename = format!("{date_prefix}_{}_{}.gpx", tour.id, safe_name);
+                let destination = output_dir.join(folder).join(&tour.status).join(filename);
+
+                if destination.exists() {
+                    summary.skipped_existing += 1;
+                } else {
+                    match client.download_tour_gpx(&tour.id) {
+                        Ok(gpx) => {
+                            if let Some(parent) = destination.parent() {
+                                fs::create_dir_all(parent).with_context(|| {
+                                    format!("failed to create folder {}", parent.display())
+                                })?;
+                            }
+                            fs::write(&destination, gpx).with_context(|| {
+                                format!("failed to write {}", destination.display())
                             })?;
+                            summary.saved += 1;
                         }
-                        fs::write(&destination, gpx).with_context(|| {
-                            format!("failed to write {}", destination.display())
-                        })?;
-                        summary.saved += 1;
-                    }
-                    Err(err) => {
-                        eprintln!("Failed to download GPX for tour {}: {err}", tour.id);
-                        summary.failed += 1;
+                        Err(err) => {
+                            eprintln!("Failed to download GPX for tour {}: {err}", tour.id);
+                            summary.failed += 1;
+                        }
                     }
                 }
             }
@@ -253,6 +255,30 @@ mod tests {
                 .join("made/public/2024-01-01_55_Fail_Tour.gpx")
                 .exists()
         );
+    }
+
+    #[test]
+    fn export_unknown_type_counts_as_skipped_type_even_with_type_filter() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let tour = make_tour(
+            "88",
+            "Unknown",
+            "tour_unknown",
+            "public",
+            "2024-03-15T00:00:00Z",
+        );
+        let client = MockKomootClient {
+            username: "user".to_string(),
+            tours: vec![tour],
+            gpx_by_id: HashMap::new(),
+        };
+        let filters = Filters {
+            types: Some(["recorded".to_string()].into()),
+            ..Filters::default()
+        };
+        let summary = export_with_client(&client, tmp.path(), &filters).expect("export");
+        assert_eq!(summary.skipped_type, 1);
+        assert_eq!(summary.skipped_filter, 0);
     }
 
     #[test]

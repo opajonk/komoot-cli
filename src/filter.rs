@@ -79,12 +79,14 @@ pub fn build_filters(
         anyhow::bail!("--from-date ({from}) must not be after --to-date ({to})");
     }
     for s in statuses {
-        if !["public", "friends", "private"].contains(&s.as_str()) {
+        let normalized = s.trim().to_lowercase();
+        if !["public", "friends", "private"].contains(&normalized.as_str()) {
             anyhow::bail!("invalid --status value '{s}': must be one of public, friends, private");
         }
     }
     for t in tour_types {
-        if !["planned", "recorded"].contains(&t.as_str()) {
+        let normalized = t.trim().to_lowercase();
+        if !["planned", "recorded"].contains(&normalized.as_str()) {
             anyhow::bail!("invalid --type value '{t}': must be one of planned, recorded");
         }
     }
@@ -94,12 +96,12 @@ pub fn build_filters(
         statuses: if statuses.is_empty() {
             None
         } else {
-            Some(statuses.iter().cloned().collect())
+            Some(statuses.iter().map(|s| s.trim().to_lowercase()).collect())
         },
         types: if tour_types.is_empty() {
             None
         } else {
-            Some(tour_types.iter().cloned().collect())
+            Some(tour_types.iter().map(|t| t.trim().to_lowercase()).collect())
         },
     })
 }
@@ -131,6 +133,18 @@ mod tests {
     #[test]
     fn build_filters_accepts_equal_from_and_to_date() {
         assert!(build_filters(Some("2024-06-01"), Some("2024-06-01"), &[], &[]).is_ok());
+    }
+
+    #[test]
+    fn build_filters_trims_and_lowercases_status_and_type() {
+        let statuses = vec![" Public ".to_string(), "FRIENDS".to_string()];
+        let types = vec![" Recorded ".to_string()];
+        let filters = build_filters(None, None, &statuses, &types).expect("valid filters");
+        assert_eq!(
+            filters.statuses,
+            Some(["public".to_string(), "friends".to_string()].into())
+        );
+        assert_eq!(filters.types, Some(["recorded".to_string()].into()));
     }
 
     #[test]
