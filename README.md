@@ -21,13 +21,17 @@ Re-running the script is safe — already-downloaded files are skipped.
 
 ## Requirements
 
-- Rust (stable toolchain)
+- Rust (stable toolchain), if you want to build or run via Cargo
 
 ## Setup
 
 ```bash
 cargo build
 ```
+
+Alternatively, you can download a prebuilt executable for your platform from the latest GitHub release:
+
+<https://github.com/opajonk/komoot-export/releases/latest>
 
 ## Usage
 
