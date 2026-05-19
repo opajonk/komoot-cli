@@ -29,20 +29,22 @@ pub fn tour_matches_filters(tour: &TourEntry, filters: &Filters) -> bool {
     {
         return false;
     }
-    // Parse tour date directly from RFC 3339, falling back to 2000-01-01 for
-    // unparseable dates so that date-range filters still work predictably.
-    let tour_date = DateTime::parse_from_rfc3339(&tour.date)
-        .map(|dt| dt.with_timezone(&Utc).date_naive())
-        .unwrap_or_else(|_| NaiveDate::from_ymd_opt(2000, 1, 1).unwrap());
-    if let Some(from) = filters.from_date
-        && tour_date < from
-    {
-        return false;
-    }
-    if let Some(to) = filters.to_date
-        && tour_date > to
-    {
-        return false;
+    if filters.from_date.is_some() || filters.to_date.is_some() {
+        // Parse tour date directly from RFC 3339, falling back to 2000-01-01 for
+        // unparseable dates so that date-range filters still work predictably.
+        let tour_date = DateTime::parse_from_rfc3339(&tour.date)
+            .map(|dt| dt.with_timezone(&Utc).date_naive())
+            .unwrap_or_else(|_| NaiveDate::from_ymd_opt(2000, 1, 1).unwrap());
+        if let Some(from) = filters.from_date
+            && tour_date < from
+        {
+            return false;
+        }
+        if let Some(to) = filters.to_date
+            && tour_date > to
+        {
+            return false;
+        }
     }
     true
 }
