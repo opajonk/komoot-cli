@@ -62,7 +62,7 @@ cargo run -- --output-dir ~/komoot-backup
 | `--status` | — | all | Only export tours with the given visibility; comma-separated (`public,friends,private`) |
 | `--type` | — | all | Only export tours of the given type; comma-separated (`planned,recorded`) |
 
-All filter flags are optional and can be combined freely.  Tours excluded by a filter are never downloaded.
+All filter flags are optional and can be combined freely. Tours excluded by a filter are never downloaded.
 
 ```bash
 # export only public recorded tours from 2024
