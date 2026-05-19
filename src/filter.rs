@@ -73,6 +73,11 @@ pub fn build_filters(
                 .with_context(|| format!("invalid --to-date '{s}': expected YYYY-MM-DD"))
         })
         .transpose()?;
+    if let (Some(from), Some(to)) = (from_date, to_date)
+        && from > to
+    {
+        anyhow::bail!("--from-date ({from}) must not be after --to-date ({to})");
+    }
     for s in statuses {
         if !["public", "friends", "private"].contains(&s.as_str()) {
             anyhow::bail!("invalid --status value '{s}': must be one of public, friends, private");
@@ -116,6 +121,16 @@ mod tests {
     #[test]
     fn build_filters_rejects_invalid_type() {
         assert!(build_filters(None, None, &[], &["cycling".to_string()]).is_err());
+    }
+
+    #[test]
+    fn build_filters_rejects_inverted_date_range() {
+        assert!(build_filters(Some("2024-12-31"), Some("2024-01-01"), &[], &[]).is_err());
+    }
+
+    #[test]
+    fn build_filters_accepts_equal_from_and_to_date() {
+        assert!(build_filters(Some("2024-06-01"), Some("2024-06-01"), &[], &[]).is_ok());
     }
 
     #[test]
