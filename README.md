@@ -57,6 +57,19 @@ cargo run -- --output-dir ~/komoot-backup
 | `--email` | `KOMOOT_EMAIL` | — | Komoot account e-mail (required) |
 | `--password` | `KOMOOT_PASSWORD` | — | Komoot account password (required) |
 | `--output-dir` | — | `tours` | Root directory for exported GPX files |
+| `--from-date` | — | — | Only export tours on or after this date (`YYYY-MM-DD`) |
+| `--to-date` | — | — | Only export tours on or before this date (`YYYY-MM-DD`) |
+| `--status` | — | all | Only export tours with the given visibility; comma-separated (`public,friends,private`) |
+| `--type` | — | all | Only export tours of the given type; comma-separated (`planned,recorded`) |
+
+All filter flags are optional and can be combined freely. Tours excluded by a filter are never downloaded.
+
+```bash
+# export only public recorded tours from 2024
+cargo run -- --email you@example.com --password yourpassword \
+  --type recorded --status public \
+  --from-date 2024-01-01 --to-date 2024-12-31
+```
 
 ## Development
 
