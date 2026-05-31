@@ -93,6 +93,7 @@ fn main() {
         password,
         command,
     } = cli;
+    #[allow(clippy::single_match)]
     let result = match command {
         Commands::Routes {
             command: RoutesCommands::Export(args),
