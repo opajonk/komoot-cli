@@ -3,13 +3,34 @@ mod export;
 mod filter;
 
 use anyhow::{Context, Result, anyhow};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
-#[command(name = "komoot-export")]
-#[command(about = "Export all Komoot tours to GPX files sorted by type and visibility.")]
-struct Args {
+#[command(name = "komoot-cli")]
+#[command(about = "A CLI for interacting with Komoot.")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Commands related to routes
+    Routes {
+        #[command(subcommand)]
+        command: RoutesCommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum RoutesCommands {
+    /// Export all Komoot tours to GPX files sorted by type and visibility
+    Export(ExportArgs),
+}
+
+#[derive(Parser, Debug)]
+struct ExportArgs {
     #[arg(long, env = "KOMOOT_EMAIL")]
     email: Option<String>,
 
@@ -36,7 +57,7 @@ struct Args {
     tour_type: Vec<String>,
 }
 
-fn run(args: Args) -> Result<()> {
+fn run_export(args: ExportArgs) -> Result<()> {
     let filters = filter::build_filters(
         args.from_date.as_deref(),
         args.to_date.as_deref(),
@@ -68,8 +89,13 @@ fn run(args: Args) -> Result<()> {
 }
 
 fn main() {
-    let args = Args::parse();
-    if let Err(err) = run(args) {
+    let cli = Cli::parse();
+    let result = match cli.command {
+        Commands::Routes {
+            command: RoutesCommands::Export(args),
+        } => run_export(args),
+    };
+    if let Err(err) = result {
         eprintln!("{err}");
         std::process::exit(1);
     }

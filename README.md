@@ -1,6 +1,12 @@
-# komoot-export
+# komoot-cli
 
-A Rust CLI that downloads all tours from a [Komoot](https://www.komoot.com) account and saves them as GPX files, organised into subfolders by tour type and visibility.
+A Rust CLI for interacting with [Komoot](https://www.komoot.com).
+
+## Commands
+
+### `routes export`
+
+Downloads all tours from a Komoot account and saves them as GPX files, organised into subfolders by tour type and visibility.
 
 ## Output structure
 
@@ -17,7 +23,7 @@ tours/
 ```
 
 Each file is named `YYYY-MM-DD_{tourId}_{tourName}.gpx`.
-Re-running the script is safe — already-downloaded files are skipped.
+Re-running the command is safe — already-downloaded files are skipped.
 
 ## Requirements
 
@@ -39,18 +45,18 @@ Credentials can be passed as flags or via environment variables:
 
 ```bash
 # flags
-cargo run -- --email you@example.com --password yourpassword
+cargo run -- routes export --email you@example.com --password yourpassword
 
 # environment variables
 export KOMOOT_EMAIL=you@example.com
 export KOMOOT_PASSWORD=yourpassword
-cargo run --
+cargo run -- routes export
 
 # custom output directory (default: ./tours)
-cargo run -- --output-dir ~/komoot-backup
+cargo run -- routes export --output-dir ~/komoot-backup
 ```
 
-### Options
+### Options for `routes export`
 
 | Flag | Env var | Default | Description |
 |---|---|---|---|
@@ -66,7 +72,7 @@ All filter flags are optional and can be combined freely. Tours excluded by a fi
 
 ```bash
 # export only public recorded tours from 2024
-cargo run -- --email you@example.com --password yourpassword \
+cargo run -- routes export --email you@example.com --password yourpassword \
   --type recorded --status public \
   --from-date 2024-01-01 --to-date 2024-12-31
 ```

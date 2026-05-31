@@ -628,7 +628,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "komoot-export"
+name = "komoot-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
