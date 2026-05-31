@@ -3,19 +3,40 @@ mod export;
 mod filter;
 
 use anyhow::{Context, Result, anyhow};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
-#[command(name = "komoot-export")]
-#[command(about = "Export all Komoot tours to GPX files sorted by type and visibility.")]
-struct Args {
-    #[arg(long, env = "KOMOOT_EMAIL")]
+#[command(name = "komoot-cli")]
+#[command(about = "A CLI for interacting with Komoot.")]
+struct Cli {
+    #[arg(long, env = "KOMOOT_EMAIL", global = true)]
     email: Option<String>,
 
-    #[arg(long, env = "KOMOOT_PASSWORD")]
+    #[arg(long, env = "KOMOOT_PASSWORD", global = true)]
     password: Option<String>,
 
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Commands related to routes
+    Routes {
+        #[command(subcommand)]
+        command: RoutesCommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum RoutesCommands {
+    /// Export all Komoot tours to GPX files sorted by type and visibility
+    Export(ExportArgs),
+}
+
+#[derive(clap::Args, Debug)]
+struct ExportArgs {
     #[arg(long, default_value = "tours")]
     output_dir: PathBuf,
 
@@ -36,17 +57,15 @@ struct Args {
     tour_type: Vec<String>,
 }
 
-fn run(args: Args) -> Result<()> {
+fn run_export(email: Option<String>, password: Option<String>, args: ExportArgs) -> Result<()> {
     let filters = filter::build_filters(
         args.from_date.as_deref(),
         args.to_date.as_deref(),
         &args.status,
         &args.tour_type,
     )?;
-    let email = args
-        .email
-        .ok_or_else(|| anyhow!("KOMOOT_EMAIL or --email is required"))?;
-    let password = match args.password {
+    let email = email.ok_or_else(|| anyhow!("KOMOOT_EMAIL or --email is required"))?;
+    let password = match password {
         Some(pwd) => pwd,
         None => rpassword::prompt_password("Komoot password: ")
             .context("failed to read password from terminal")?,
@@ -68,8 +87,19 @@ fn run(args: Args) -> Result<()> {
 }
 
 fn main() {
-    let args = Args::parse();
-    if let Err(err) = run(args) {
+    let cli = Cli::parse();
+    let Cli {
+        email,
+        password,
+        command,
+    } = cli;
+    #[allow(clippy::single_match)]
+    let result = match command {
+        Commands::Routes {
+            command: RoutesCommands::Export(args),
+        } => run_export(email, password, args),
+    };
+    if let Err(err) = result {
         eprintln!("{err}");
         std::process::exit(1);
     }
