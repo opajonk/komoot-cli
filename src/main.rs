@@ -29,7 +29,7 @@ enum RoutesCommands {
     Export(ExportArgs),
 }
 
-#[derive(Parser, Debug)]
+#[derive(clap::Args, Debug)]
 struct ExportArgs {
     #[arg(long, env = "KOMOOT_EMAIL")]
     email: Option<String>,
