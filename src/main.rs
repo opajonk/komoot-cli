@@ -10,6 +10,12 @@ use std::path::PathBuf;
 #[command(name = "komoot-cli")]
 #[command(about = "A CLI for interacting with Komoot.")]
 struct Cli {
+    #[arg(long, env = "KOMOOT_EMAIL", global = true)]
+    email: Option<String>,
+
+    #[arg(long, env = "KOMOOT_PASSWORD", global = true)]
+    password: Option<String>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -31,12 +37,6 @@ enum RoutesCommands {
 
 #[derive(clap::Args, Debug)]
 struct ExportArgs {
-    #[arg(long, env = "KOMOOT_EMAIL")]
-    email: Option<String>,
-
-    #[arg(long, env = "KOMOOT_PASSWORD")]
-    password: Option<String>,
-
     #[arg(long, default_value = "tours")]
     output_dir: PathBuf,
 
@@ -57,17 +57,15 @@ struct ExportArgs {
     tour_type: Vec<String>,
 }
 
-fn run_export(args: ExportArgs) -> Result<()> {
+fn run_export(email: Option<String>, password: Option<String>, args: ExportArgs) -> Result<()> {
     let filters = filter::build_filters(
         args.from_date.as_deref(),
         args.to_date.as_deref(),
         &args.status,
         &args.tour_type,
     )?;
-    let email = args
-        .email
-        .ok_or_else(|| anyhow!("KOMOOT_EMAIL or --email is required"))?;
-    let password = match args.password {
+    let email = email.ok_or_else(|| anyhow!("KOMOOT_EMAIL or --email is required"))?;
+    let password = match password {
         Some(pwd) => pwd,
         None => rpassword::prompt_password("Komoot password: ")
             .context("failed to read password from terminal")?,
@@ -90,10 +88,15 @@ fn run_export(args: ExportArgs) -> Result<()> {
 
 fn main() {
     let cli = Cli::parse();
-    let result = match cli.command {
+    let Cli {
+        email,
+        password,
+        command,
+    } = cli;
+    let result = match command {
         Commands::Routes {
             command: RoutesCommands::Export(args),
-        } => run_export(args),
+        } => run_export(email, password, args),
     };
     if let Err(err) = result {
         eprintln!("{err}");

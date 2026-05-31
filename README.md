@@ -45,7 +45,7 @@ Credentials can be passed as flags or via environment variables:
 
 ```bash
 # flags
-cargo run -- routes export --email you@example.com --password yourpassword
+cargo run -- --email you@example.com --password yourpassword routes export
 
 # environment variables
 export KOMOOT_EMAIL=you@example.com
@@ -53,15 +53,20 @@ export KOMOOT_PASSWORD=yourpassword
 cargo run -- routes export
 
 # custom output directory (default: ./tours)
-cargo run -- routes export --output-dir ~/komoot-backup
+cargo run -- --email you@example.com routes export --output-dir ~/komoot-backup
 ```
+
+### Global options for `komoot-cli`
+
+| Flag | Env var | Default | Description |
+|---|---|---|---|
+| `--email` | `KOMOOT_EMAIL` | — | Komoot account e-mail (required) |
+| `--password` | `KOMOOT_PASSWORD` | — | Komoot account password (optional; prompted if missing) |
 
 ### Options for `routes export`
 
 | Flag | Env var | Default | Description |
 |---|---|---|---|
-| `--email` | `KOMOOT_EMAIL` | — | Komoot account e-mail (required) |
-| `--password` | `KOMOOT_PASSWORD` | — | Komoot account password (required) |
 | `--output-dir` | — | `tours` | Root directory for exported GPX files |
 | `--from-date` | — | — | Only export tours on or after this date (`YYYY-MM-DD`) |
 | `--to-date` | — | — | Only export tours on or before this date (`YYYY-MM-DD`) |
@@ -72,7 +77,7 @@ All filter flags are optional and can be combined freely. Tours excluded by a fi
 
 ```bash
 # export only public recorded tours from 2024
-cargo run -- routes export --email you@example.com --password yourpassword \
+cargo run -- --email you@example.com --password yourpassword routes export \
   --type recorded --status public \
   --from-date 2024-01-01 --to-date 2024-12-31
 ```
