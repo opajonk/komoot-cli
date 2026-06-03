@@ -8,6 +8,10 @@ A Rust CLI for interacting with [Komoot](https://www.komoot.com).
 
 Downloads all tours from a Komoot account and saves them as GPX files, organised into subfolders by tour type and visibility.
 
+### `routes list`
+
+Lists all tours as a Markdown table to stdout.
+
 ## Output structure
 
 ```
@@ -54,6 +58,9 @@ cargo run -- routes export
 
 # custom output directory (default: ./tours)
 cargo run -- --email you@example.com routes export --output-dir ~/komoot-backup
+
+# list all tours as markdown
+cargo run -- --email you@example.com --password yourpassword routes list
 ```
 
 ### Global options for `komoot-cli`
@@ -81,6 +88,17 @@ cargo run -- --email you@example.com --password yourpassword routes export \
   --type recorded --status public \
   --from-date 2024-01-01 --to-date 2024-12-31
 ```
+
+### Options for `routes list`
+
+| Flag | Env var | Default | Description |
+|---|---|---|---|
+| `--from-date` | — | — | Only list tours on or after this date (`YYYY-MM-DD`) |
+| `--to-date` | — | — | Only list tours on or before this date (`YYYY-MM-DD`) |
+| `--status` | — | all | Only list tours with the given visibility; comma-separated (`public,friends,private`) |
+| `--type` | — | all | Only list tours of the given type; comma-separated (`planned,recorded`) |
+
+All filter flags are optional and can be combined freely.
 
 ## Development
 
