@@ -170,13 +170,13 @@ impl KomootApi for HttpKomootClient {
     }
 
     fn fetch_all_tours(&self) -> Result<Vec<TourEntry>> {
-        println!("Fetching tour lists...");
+        eprintln!("Fetching tour lists...");
         let mut all_tours = Vec::new();
         let mut seen_ids = HashSet::new();
 
         for status in STATUSES {
             for tour_type in TOUR_TYPES {
-                println!("Loading tours (type={tour_type}, status={status})...");
+                eprintln!("Loading tours (type={tour_type}, status={status})...");
                 let before_count = all_tours.len();
                 let mut page = 0usize;
                 loop {
@@ -214,7 +214,7 @@ impl KomootApi for HttpKomootClient {
                     page = response.page.number + 1;
                 }
                 let added = all_tours.len() - before_count;
-                println!("Loaded tours (type={tour_type}, status={status}): {added} new entries.");
+                eprintln!("Loaded tours (type={tour_type}, status={status}): {added} new entries.");
             }
         }
 
