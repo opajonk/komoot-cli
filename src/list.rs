@@ -16,17 +16,21 @@ fn escape_markdown_cell(value: &str) -> String {
 }
 
 fn render_markdown_table(tours: &[TourEntry]) -> String {
+    use std::fmt::Write as _;
+
     let mut output =
         String::from("| ID | Name | Type | Status | Date |\n| --- | --- | --- | --- | --- |\n");
     for tour in tours {
-        output.push_str(&format!(
-            "| {} | {} | {} | {} | {} |\n",
+        writeln!(
+            &mut output,
+            "| {} | {} | {} | {} | {} |",
             escape_markdown_cell(&tour.id),
             escape_markdown_cell(&tour.name),
             escape_markdown_cell(tour_type_label(&tour.tour_type)),
             escape_markdown_cell(&tour.status),
             escape_markdown_cell(&tour.date)
-        ));
+        )
+        .expect("writing to String should not fail");
     }
     output
 }
