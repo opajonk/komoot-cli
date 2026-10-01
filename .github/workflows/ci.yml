@@ -41,6 +41,25 @@ jobs:
       - name: Run tests
         run: cargo test --all-targets --all-features -- --nocapture
 
+  scorecard:
+    name: OSSF Scorecard
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run Scorecard
+        uses: ossf/scorecard-action@v2.4.4
+        with:
+          results_file: scorecard-results.sarif
+          results_format: sarif
+          publish_results: true
+
   build-binaries:
     name: build ${{ matrix.artifact_name }}
     strategy:
