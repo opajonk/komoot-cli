@@ -60,6 +60,11 @@ jobs:
           results_format: sarif
           publish_results: true
 
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: scorecard-results.sarif
+
   build-binaries:
     name: build ${{ matrix.artifact_name }}
     strategy:
